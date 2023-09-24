@@ -26,12 +26,26 @@ router.get('/get-student-data', async (req, res) => {
         const { student_name } = req.query;
 
 
-        const foundData = await StudentData.find({ student_name: { $regex: new RegExp(student_name, "i") } })
-            .sort({
-                of_courses_completed: -1,
-                of_skill_badges_completed: -1,
-                of_gen_ai_game_completed: -1,
-            });
+        const foundData = await StudentData.aggregate([
+            {
+                $match: {
+                    student_name: { $regex: new RegExp(student_name, "i") }
+                }
+            },
+            {
+                $addFields: {
+                    totalScore: {
+                        $add: ["$of_courses_completed", "$of_skill_badges_completed", "$of_gen_ai_game_completed"]
+                    }
+                }
+            },
+            {
+                $sort: {
+                    totalScore: -1
+                }
+            }
+        ]);
+
         const total = await StudentData.find({});
 
         res.status(200).json({ msg: 'ok', foundData, total: total.length });
